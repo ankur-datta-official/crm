@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
 import { BrowserTimeZoneSync } from "@/components/providers/browser-timezone-sync";
@@ -59,7 +59,8 @@ export function AppShell({
     <ProductTourProvider initialState={initialProductTourState}>
       <BrowserTimeZoneSync />
       <div data-app-shell-root className="flex h-dvh min-h-dvh overflow-hidden bg-background">
-        <AppSidebar
+        <Suspense fallback={null}>
+          <AppSidebar
           open={sidebarOpen}
           onOpenChange={setSidebarOpen}
           collapsed={sidebarCollapsed}
@@ -70,7 +71,8 @@ export function AppShell({
           activeWorkspaceIsOwner={activeWorkspaceIsOwner}
           canViewTeamPage={canViewTeamPage}
           canViewTeamPerformance={canViewTeamPerformance}
-        />
+          />
+        </Suspense>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <AppTopbar
             onMenuClick={() => setSidebarOpen(true)}

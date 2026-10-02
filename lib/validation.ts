@@ -1,4 +1,4 @@
-import type { ZodError } from "zod";
+import type { ZodError } from "zod/v3";
 
 export type ValidationIssue = {
   field: string;

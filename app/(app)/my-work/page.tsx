@@ -30,6 +30,7 @@ export default async function MyWorkPage() {
       </GuidanceStrip>
 
       <TeamWorkspacePanel
+        key={myWork.tasks.map((task) => `${task.id}:${task.updated_at}`).join("|")}
         mode="self"
         tasks={myWork.tasks}
         recentUpdates={myWork.recentUpdates}

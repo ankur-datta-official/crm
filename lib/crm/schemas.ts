@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 export function emptyToUndefined(value: unknown) {
   if (value === null || value === undefined) {

@@ -185,6 +185,7 @@ export default async function TeamPage({ searchParams }: TeamPageProps) {
 
         <TabsContent value="work" className="space-y-4">
           <TeamWorkspacePanel
+            key={teamTasks.map((task) => `${task.id}:${task.updated_at}`).join("|")}
             mode="team"
             tasks={teamTasks}
             recentUpdates={recentTaskUpdates}

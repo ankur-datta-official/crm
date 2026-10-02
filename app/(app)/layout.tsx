@@ -7,6 +7,9 @@ import { PRODUCT_TOUR_VERSION, type ProductTourState } from "@/lib/product-tour/
 import { getCurrentUserWalletSummary } from "@/lib/scoring/queries";
 import { getWorkspaceSwitcherState } from "@/lib/workspace/queries";
 
+// Every page in this area depends on the current session and workspace.
+export const dynamic = "force-dynamic";
+
 export default async function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const [{ profile, organization }, workspaceSwitcherState] = await Promise.all([
     getCurrentAppContext(),

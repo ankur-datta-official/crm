@@ -94,12 +94,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         Start with Sales Overview for a quick read, then switch tabs to inspect pipeline, meetings, follow-ups, and support trends.
       </GuidanceStrip>
 
-      <ReportFilterBar
-        users={users}
-        industries={industries}
-        stages={stages}
-        categories={categories}
-      />
+      <Suspense fallback={null}>
+        <ReportFilterBar
+          users={users}
+          industries={industries}
+          stages={stages}
+          categories={categories}
+        />
+      </Suspense>
 
       <ReportTabs currentTab={currentTab} lockedTabs={lockedTabs} description={tabDescriptions[currentTab] ?? tabDescriptions["sales-overview"]}>
         <Suspense fallback={<ReportLoadingFallback />}>

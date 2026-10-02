@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset";
 import { prisma } from "@/lib/prisma";
 

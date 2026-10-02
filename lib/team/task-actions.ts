@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { getCurrentProfile, hasPermission, requireAuth, requireOrganization } from "@/lib/auth/session";
 import { getSafeErrorMessage, logServerError } from "@/lib/errors";
 import { createWorkspaceNotification } from "@/lib/notifications/notifications";

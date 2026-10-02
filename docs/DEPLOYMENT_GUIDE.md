@@ -1,146 +1,34 @@
-# Deployment Guide
+﻿# Vercel deployment
 
-This guide prepares the CRM for a Vercel + Supabase staging or production deployment.
+This project runs on Next.js 16 with PostgreSQL, Prisma, and Better Auth. The old Supabase Auth and Storage deployment instructions do not apply to this branch.
 
-## 1. Supabase project setup
+## Before deploying
 
-1. Create a Supabase project.
-2. Copy:
-   - project URL
-   - publishable key
-   - service role key for future server-only admin jobs if ever needed
-3. Keep the service role key private.
+1. Provision a reachable PostgreSQL database. `127.0.0.1` in `DATABASE_URL` will not work from Vercel.
+2. Run the checked-in Prisma migrations against that database from a trusted environment: `npx prisma migrate deploy`. Back up an existing database first.
+3. Add the environment variables below to the Vercel project for the appropriate environment. Keep secrets server-only.
+4. Import the GitHub repository as a Next.js project and use the repository's default `npm install` and `npm run build` commands. The build script generates the Prisma client.
+5. Redeploy after changing environment variables. Test `/api/health/prisma`, authentication, and the main CRM pages.
 
-## 2. Migration run order
+## Required environment variables
 
-Run the default fresh-install migration chain in this order:
-
-1. `001_core_saas_schema.sql`
-2. `002_seed_platform_data.sql`
-3. `003_crm_base_company_management.sql`
-4. `004_contact_person_management.sql`
-5. `005_interaction_meeting_log.sql`
-6. `006_followup_reminder_management.sql`
-7. `007_document_management.sql`
-8. `008_need_help_escalation.sql`
-9. `009_team_role_permission_management.sql`
-10. `010_subscription_plan_limits.sql`
-11. `012_notifications_search_polish.sql`
-
-Important:
-
-- `012_notifications_search_polish.sql` replaces the old duplicate `011` notifications reference.
-- `011_fix_admin_permissions.sql` is a legacy repair migration for older upgraded environments only, not part of the standard fresh staging setup.
-
-## 3. Storage bucket setup
-
-Create a private Supabase Storage bucket:
-
-```bash
-crm-documents
+```text
+DATABASE_URL=postgresql://...  # remote database reachable from Vercel
+NEXT_PUBLIC_APP_URL=https://your-domain.example
+BETTER_AUTH_URL=https://your-domain.example
+BETTER_AUTH_SECRET=<long random secret>
+AUTH_SECRET=<long random secret>
+NEXTAUTH_URL=https://your-domain.example
+AUTH_PROVIDER=betterauth
+NEXT_PUBLIC_AUTH_PROVIDER=betterauth
+OPEN_ACCESS_ENABLED=false
+NEXT_PUBLIC_OPEN_ACCESS_ENABLED=false
 ```
 
-Recommended object path:
+Set both open-access variables to `true` only if the intended deployment is the shared, login-free workspace. Use the same public origin for the three URL variables and configure them for each preview or production environment that needs to work.
 
-```bash
-organization_id/company_id/document_id/original-file-name
-```
+Email features require `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, or the SMTP settings in `.env.example`. Scheduled reminders additionally require `CRON_SECRET` and a configured scheduler.
 
-## 4. Required environment variables
+## File uploads on Vercel
 
-Configure these in Vercel and local `.env.local`:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-# NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_APP_URL=
-
-SUPABASE_SERVICE_ROLE_KEY=
-
-REMINDER_EMAIL_ENABLED=
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM=
-CRON_SECRET=
-```
-
-Notes:
-
-- `SUPABASE_SERVICE_ROLE_KEY` must stay server-only.
-- `NEXT_PUBLIC_APP_URL` should point to the deployed frontend origin.
-- If email reminders are not used yet, keep `REMINDER_EMAIL_ENABLED=false`.
-
-## 5. Vercel deployment steps
-
-1. Push the repo to GitHub.
-2. Import the project into Vercel.
-3. Add the environment variables above.
-4. Set the production branch.
-5. Trigger a deployment.
-6. Confirm `npm run build` succeeds in Vercel build logs.
-
-## 6. Supabase Auth redirect setup
-
-Set Supabase site URL to your deployed frontend URL.
-
-Add redirect URLs for:
-
-- `/auth/login`
-- `/auth/register`
-- `/onboarding/workspace`
-- `/auth/accept-invite`
-
-Example:
-
-```bash
-https://your-app.vercel.app/onboarding/workspace
-https://your-app.vercel.app/auth/accept-invite
-```
-
-## 7. Cron reminder endpoint setup
-
-The reminder endpoint is:
-
-```bash
-/api/cron/followup-reminders
-```
-
-Use one of these auth methods:
-
-- `Authorization: Bearer <CRON_SECRET>`
-- `?secret=<CRON_SECRET>`
-
-Recommended:
-
-- Use a server-side scheduler such as Vercel Cron with the bearer token.
-
-## 8. Optional demo seed
-
-An optional seed file is available at:
-
-```bash
-supabase/seeds/demo_data.sql
-```
-
-Use it only in local or staging environments. Do not auto-run it in production.
-
-## 9. Post-deployment smoke test
-
-1. Register a new test user.
-2. Create a workspace.
-3. Open `/dashboard`.
-4. Create a company.
-5. Create a contact.
-6. Create a meeting.
-7. Create a follow-up.
-8. Upload a small document.
-9. Create a help request.
-10. Open `/reports`.
-11. Open `/team`.
-12. Open `/subscription`.
-13. Test topbar search.
-14. Test the notification center.
-15. Log out and confirm protected route redirects still work.
+The current avatar and document storage implementation writes to local directories (`lib/storage/local.ts`). Vercel functions do not provide persistent writable storage for those files. Deploying the app to Vercel will not make uploaded files durable; use a persistent object storage implementation before enabling avatar or document uploads in production. The VPS deployment guide remains appropriate if local filesystem storage is required.

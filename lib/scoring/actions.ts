@@ -1,6 +1,6 @@
 "use server";
 
-import { z } from "zod";
+import { z } from "zod/v3";
 import { requireAuth, requireOrganization, requirePermission } from "@/lib/auth/session";
 import { getSafeErrorMessage } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";

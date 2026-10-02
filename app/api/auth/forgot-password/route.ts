@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { createPasswordResetToken, resolveAppBaseUrl } from "@/lib/auth/password-reset";
 import { sendTransactionalEmail } from "@/lib/email/smtp";
 

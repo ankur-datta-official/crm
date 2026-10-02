@@ -1,7 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 const resendEnvSchema = z.object({
   apiKey: z.string().trim().min(1),

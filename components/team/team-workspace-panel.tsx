@@ -109,15 +109,9 @@ export function TeamWorkspacePanel({
   });
   const [error, setError] = useState<string | null>(null);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
-  const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>(
-    Object.fromEntries(tasks.map((task) => [task.id, String(task.progress_percent)])),
-  );
-  const [statusDrafts, setStatusDrafts] = useState<Record<string, TeamTaskStatus>>(
-    Object.fromEntries(tasks.map((task) => [task.id, task.status])),
-  );
-  const [assigneeDrafts, setAssigneeDrafts] = useState<Record<string, string>>(
-    Object.fromEntries(tasks.map((task) => [task.id, task.assigned_to ?? ""])),
-  );
+  const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, TeamTaskStatus>>({});
+  const [assigneeDrafts, setAssigneeDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -125,12 +119,6 @@ export function TeamWorkspacePanel({
       isMountedRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    setProgressDrafts(Object.fromEntries(tasks.map((task) => [task.id, String(task.progress_percent)])));
-    setStatusDrafts(Object.fromEntries(tasks.map((task) => [task.id, task.status])));
-    setAssigneeDrafts(Object.fromEntries(tasks.map((task) => [task.id, task.assigned_to ?? ""])));
-  }, [tasks]);
 
   const memberOptions = useMemo(
     () => members.filter((member) => member.is_active).map((member) => ({

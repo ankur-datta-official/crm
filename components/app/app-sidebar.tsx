@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, LayoutDashboard, X } from "lucide-react";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -97,14 +97,13 @@ export function AppSidebar({
   const searchParams = useSearchParams();
   const [teamManagementOpen, setTeamManagementOpen] = useState(true);
 
-  const itemsWithAdmin: RenderableSidebarItem[] = profile?.is_super_admin
-    ? [
-        ...sidebarItems,
-        { id: "admin", title: "Admin Console", href: "/admin", icon: LayoutDashboard, section: "Admin" as SidebarSection },
-      ]
-    : [...sidebarItems];
-
   const filteredItems = useMemo(() => {
+    const itemsWithAdmin: RenderableSidebarItem[] = profile?.is_super_admin
+      ? [
+          ...sidebarItems,
+          { id: "admin", title: "Admin Console", href: "/admin", icon: LayoutDashboard, section: "Admin" as SidebarSection },
+        ]
+      : [...sidebarItems];
     return itemsWithAdmin
       .map((item) => {
         if (!item.children) {
@@ -115,18 +114,7 @@ export function AppSidebar({
         return children.length > 0 ? { ...item, children } : null;
       })
       .filter((item): item is RenderableSidebarItem => Boolean(item));
-  }, [canViewTeamPage, canViewTeamPerformance, itemsWithAdmin]);
-
-  const isTeamManagementActive = filteredItems.some((item) =>
-    item.id === "team-management"
-    && (item.children?.some((child) => matchesHref(pathname, searchParams, child.href)) ?? false),
-  );
-
-  useEffect(() => {
-    if (isTeamManagementActive) {
-      setTeamManagementOpen(true);
-    }
-  }, [isTeamManagementActive]);
+  }, [canViewTeamPage, canViewTeamPerformance, profile?.is_super_admin]);
 
   return (
     <>
