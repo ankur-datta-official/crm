@@ -1,0 +1,34 @@
+Upload this file:
+- crm-next-deploy-2026-05-11.zip
+
+Recommended upload target:
+- /home/crm.mugnee.com/
+
+Example upload from Windows PowerShell:
+scp .\deploy-upload-ready\crm-next-deploy-2026-05-11.zip <server-user>@<server-ip>:/home/crm.mugnee.com/
+
+PuTTY terminal commands after upload:
+cd /home/crm.mugnee.com
+mkdir -p app
+unzip -o crm-next-deploy-2026-05-11.zip -d /home/crm.mugnee.com/app
+cd /home/crm.mugnee.com/app
+mkdir -p public/uploads storage/private storage/tmp
+npm install --legacy-peer-deps
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+pm2 restart crm-next --update-env
+pm2 save
+pm2 status
+
+If this is your first deploy and env file is not set yet:
+cd /home/crm.mugnee.com/app
+cp .env.production.example .env.production
+nano .env.production
+pm2 start ecosystem.config.cjs
+pm2 save
+
+Useful check commands:
+pm2 logs crm-next --lines 50
+curl http://127.0.0.1:3001
+curl -I https://crm.mugnee.com

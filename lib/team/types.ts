@@ -1,0 +1,320 @@
+export type TeamMember = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  job_title: string | null;
+  department: string | null;
+  phone: string | null;
+  organization_id: string | null;
+  created_at: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  role_id: string | null;
+  role_name: string | null;
+  role_slug: string | null;
+  is_workspace_owner?: boolean;
+  is_fixed_super_admin?: boolean;
+  manager_user_id?: string | null;
+  manager_name?: string | null;
+  manager_email?: string | null;
+};
+
+export type TeamInvitation = {
+  id: string;
+  organization_id: string;
+  email: string;
+  role_id: string;
+  invited_by: string | null;
+  token: string;
+  full_name: string | null;
+  job_title: string | null;
+  department: string | null;
+  phone: string | null;
+  status: "pending" | "accepted" | "cancelled" | "expired";
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+  role_name?: string | null;
+  role_slug?: string | null;
+  invited_by_name?: string;
+  invite_link?: string;
+};
+
+export type RoleRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_system: boolean;
+  organization_id: string;
+};
+
+export type RoleWithPermissions = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_system: boolean;
+  organization_id: string;
+  permissions: string[];
+};
+
+export type Permission = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+};
+
+export const TEAM_TASK_STATUSES = ["todo", "in_progress", "blocked", "done", "cancelled"] as const;
+export const TEAM_TASK_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
+export const TEAM_TASK_RELATED_ENTITY_TYPES = ["company", "interaction", "followup", "help_request", "document"] as const;
+
+export type TeamTaskStatus = (typeof TEAM_TASK_STATUSES)[number];
+export type TeamTaskPriority = (typeof TEAM_TASK_PRIORITIES)[number];
+export type TeamTaskRelatedEntityType = (typeof TEAM_TASK_RELATED_ENTITY_TYPES)[number];
+
+export type TeamTask = {
+  id: string;
+  organization_id: string;
+  title: string;
+  description: string | null;
+  status: TeamTaskStatus;
+  priority: TeamTaskPriority;
+  progress_percent: number;
+  start_date: string | null;
+  due_date: string | null;
+  completed_at: string | null;
+  created_by: string;
+  assigned_to: string | null;
+  manager_owner_id: string | null;
+  related_entity_type: TeamTaskRelatedEntityType | null;
+  related_entity_id: string | null;
+  created_at: string;
+  updated_at: string;
+  creator: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+  assignee: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+  manager_owner: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+};
+
+export type TeamTaskUpdate = {
+  id: string;
+  team_task_id: string;
+  organization_id: string;
+  author_user_id: string | null;
+  update_type: "created" | "assigned" | "status_changed" | "progress_changed" | "commented" | "completed" | "reopened" | "cancelled";
+  message: string | null;
+  previous_status: TeamTaskStatus | null;
+  next_status: TeamTaskStatus | null;
+  previous_progress: number | null;
+  next_progress: number | null;
+  created_at: string;
+  author: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+};
+
+export type TeamWorkloadSummary = {
+  teamTaskCount: number;
+  overdueTaskCount: number;
+  blockedTaskCount: number;
+  doneTaskCount: number;
+  noActivityMemberCount: number;
+  completionRate: number;
+};
+
+export type MemberWorkProgressSnapshot = {
+  userId: string;
+  name: string;
+  email: string;
+  roleName: string | null;
+  managerName: string | null;
+  teamTaskCount: number;
+  todoTaskCount: number;
+  inProgressTaskCount: number;
+  blockedTaskCount: number;
+  overdueTaskCount: number;
+  completedTaskCount: number;
+  averageProgress: number;
+  assignedCompanies: number;
+  scheduledMeetings: number;
+  pendingFollowups: number;
+  openHelpRequests: number;
+  recentActivityCount: number;
+};
+
+export const PERFORMANCE_TARGET_METRICS = {
+  leads_created: "Leads created",
+  meetings_logged: "Meetings logged",
+  followups_completed: "Follow-ups completed",
+} as const;
+
+export const PERFORMANCE_TARGET_PERIODS = ["daily", "monthly"] as const;
+
+export type PerformanceTargetMetric = keyof typeof PERFORMANCE_TARGET_METRICS;
+export type PerformanceTargetPeriod = (typeof PERFORMANCE_TARGET_PERIODS)[number];
+
+export type UserPerformanceTarget = {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  metric_key: PerformanceTargetMetric;
+  period_type: PerformanceTargetPeriod;
+  target_value: number;
+  effective_date: string;
+  notes: string | null;
+  assigned_by: string | null;
+  created_at: string;
+  updated_at: string;
+  profile?: {
+    full_name: string | null;
+    email: string;
+  } | null;
+};
+
+export type PerformanceTrendPoint = {
+  date: string;
+  label: string;
+  target: number;
+  achievement: number;
+};
+
+export type PerformanceMetricSnapshot = {
+  metric: PerformanceTargetMetric;
+  label: string;
+  dailyTarget: number;
+  dailyActual: number;
+  monthlyTarget: number;
+  monthlyActual: number;
+};
+
+export type CurrentUserPerformanceSnapshot = {
+  metrics: PerformanceMetricSnapshot[];
+  trend: PerformanceTrendPoint[];
+};
+
+export type ManagedActivityReportItem = {
+  id: string;
+  created_at: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  actor_user_id: string | null;
+  actor_name: string;
+  actor_email: string;
+};
+
+export const PERMISSION_GROUPS = {
+  dashboard: {
+    label: "Dashboard",
+    permissions: ["dashboard.view"],
+  },
+  companies: {
+    label: "Companies",
+    permissions: [
+      "companies.view",
+      "companies.create",
+      "companies.update",
+      "companies.archive",
+      "companies.delete",
+    ],
+  },
+  contacts: {
+    label: "Contacts",
+    permissions: [
+      "contacts.view",
+      "contacts.create",
+      "contacts.update",
+      "contacts.archive",
+    ],
+  },
+  meetings: {
+    label: "Meetings",
+    permissions: [
+      "meetings.view",
+      "meetings.create",
+      "meetings.update",
+      "meetings.archive",
+    ],
+  },
+  followups: {
+    label: "Follow-ups",
+    permissions: [
+      "followups.view",
+      "followups.create",
+      "followups.update",
+      "followups.complete",
+      "followups.cancel",
+      "followups.archive",
+    ],
+  },
+  documents: {
+    label: "Documents",
+    permissions: [
+      "documents.view",
+      "documents.upload",
+      "documents.update",
+      "documents.download",
+      "documents.archive",
+    ],
+  },
+  help_requests: {
+    label: "Need Help",
+    permissions: [
+      "help_requests.view",
+      "help_requests.create",
+      "help_requests.assign",
+      "help_requests.resolve",
+      "help_requests.reject",
+      "help_requests.archive",
+    ],
+  },
+  reports: {
+    label: "Reports",
+    permissions: ["reports.view", "reports.export"],
+  },
+  team: {
+    label: "Team",
+    permissions: [
+      "team.view",
+      "team.view_activity",
+      "team.tasks.view",
+      "team.tasks.assign",
+      "team.tasks.manage_all",
+      "team.invite",
+      "team.manage_hierarchy",
+      "team.manage_targets",
+      "team.update_role",
+      "team.deactivate",
+    ],
+  },
+  settings: {
+    label: "Settings",
+    permissions: ["settings.view", "settings.manage"],
+  },
+  scoring: {
+    label: "Scoring",
+    permissions: [
+      "scoring.view",
+      "scoring.manage",
+      "rewards.manage",
+      "leaderboard.view",
+    ],
+  },
+} as const;

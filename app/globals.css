@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 170 74% 30%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 20% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 18% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 171 35% 92%;
+    --accent-foreground: 170 74% 20%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 20% 89%;
+    --input: 214 20% 89%;
+    --ring: 170 74% 30%;
+    --radius: 0.875rem;
+  }
+
+  .dark {
+    --background: 224 46% 7%;
+    --foreground: 210 20% 96%;
+    --card: 222 38% 12%;
+    --card-foreground: 210 20% 96%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 169 78% 46%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 219 30% 17%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 220 29% 15%;
+    --muted-foreground: 215 20% 69%;
+    --accent: 220 29% 17%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 63% 46%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 217 26% 24%;
+    --input: 217 26% 24%;
+    --ring: 169 78% 46%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at top left, rgba(45, 212, 191, 0.1), transparent 24%),
+      radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 18%),
+      linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 1));
+  }
+
+  html,
+  body {
+    @apply h-full overflow-x-hidden;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  /* Prevent outer (window) scrollbar when app-shell manages its own scrolling. */
+  html:has([data-app-shell-root]),
+  body:has([data-app-shell-root]) {
+    overflow: hidden;
+  }
+
+  ::selection {
+    @apply bg-primary/15 text-foreground;
+  }
+}
+
+@layer components {
+  .crm-surface {
+    @apply rounded-2xl border border-border bg-card shadow-soft;
+  }
+
+  .crm-filter-surface {
+    @apply rounded-2xl border border-border bg-card p-4 shadow-soft;
+  }
+
+  .crm-filter-input {
+    @apply h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:border-primary;
+  }
+
+  .crm-filter-select {
+    @apply h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 focus-visible:border-primary;
+  }
+
+  .crm-table-shell {
+    @apply overflow-hidden rounded-2xl border border-border bg-card shadow-soft;
+  }
+
+  .crm-table {
+    @apply w-full text-left text-sm;
+  }
+
+  .crm-table-head {
+    @apply border-b bg-slate-50/90 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/80 dark:text-slate-400;
+  }
+
+  .crm-table-cell {
+    @apply px-4 py-3.5 align-middle text-slate-700 dark:text-slate-300;
+  }
+
+  .crm-filter-summary {
+    @apply inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+}

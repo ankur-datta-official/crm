@@ -1,0 +1,488 @@
+"use server";
+
+import { getCurrentUser, getUserPermissions, requireOrganization } from "@/lib/auth/session";
+import { isFixedSuperAdminEmail } from "@/lib/auth/super-admin";
+import { prisma } from "@/lib/prisma";
+import { hasWorkspaceMembershipsTable } from "@/lib/workspace/memberships";
+import type { Permission, RoleRow, RoleWithPermissions, TeamInvitation, TeamMember } from "./types";
+
+type InvitationPreview = {
+  id: string;
+  organization_id: string;
+  organization_name: string;
+  email: string;
+  full_name: string | null;
+  job_title: string | null;
+  department: string | null;
+  phone: string | null;
+  role_id: string;
+  role_name: string | null;
+  status: TeamInvitation["status"];
+  expires_at: string;
+};
+
+type TeamMemberRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  job_title: string | null;
+  department: string | null;
+  phone: string | null;
+  organization_id: string;
+  created_at: Date;
+  is_active: boolean;
+  last_login_at: Date | null;
+  role_id: string | null;
+  role_name: string | null;
+  role_slug: string | null;
+  manager_user_id: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+};
+
+function normalizeInvitationStatus<T extends { status: TeamInvitation["status"]; expires_at: string }>(invitation: T): T {
+  if (invitation.status === "pending" && new Date(invitation.expires_at).getTime() < Date.now()) {
+    return { ...invitation, status: "expired" };
+  }
+
+  return invitation;
+}
+
+function mapRoleRow(role: {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_system: boolean;
+  organization_id: string;
+}): RoleRow {
+  return {
+    id: role.id,
+    name: role.name,
+    slug: role.slug,
+    description: role.description,
+    is_system: role.is_system,
+    organization_id: role.organization_id,
+  };
+}
+
+export async function getTeamMembers(): Promise<TeamMember[]> {
+  const organization = await requireOrganization();
+
+  if (!(await hasWorkspaceMembershipsTable())) {
+    const members = await prisma.user.findMany({
+      where: {
+        organization_id: organization.id,
+      },
+      orderBy: [
+        { name: "asc" },
+        { email: "asc" },
+      ],
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        job_title: true,
+        department: true,
+        phone: true,
+        organization_id: true,
+        created_at: true,
+        is_active: true,
+        manager_user_id: true,
+        manager: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        userRoles: {
+          where: {
+            organization_id: organization.id,
+          },
+          orderBy: {
+            assigned_at: "desc",
+          },
+          take: 1,
+          select: {
+            role_id: true,
+            role: {
+              select: {
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
+        sessions: {
+          orderBy: {
+            updatedAt: "desc",
+          },
+          take: 1,
+          select: {
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    return members.map((member) => {
+      const roleAssignment = member.userRoles[0] ?? null;
+      const latestSession = member.sessions[0] ?? null;
+
+      return {
+        id: member.id,
+        email: member.email,
+        full_name: member.name,
+        avatar_url: member.image,
+        job_title: member.job_title,
+        department: member.department,
+        phone: member.phone,
+        organization_id: member.organization_id,
+        created_at: member.created_at.toISOString(),
+        is_active: member.is_active,
+        last_login_at: latestSession?.updatedAt.toISOString() ?? null,
+        role_id: roleAssignment?.role_id ?? null,
+        role_name: roleAssignment?.role.name ?? null,
+        role_slug: roleAssignment?.role.slug ?? null,
+        is_workspace_owner: member.id === organization.owner_user_id,
+        is_fixed_super_admin: isFixedSuperAdminEmail(member.email),
+        manager_user_id: member.manager_user_id,
+        manager_name: member.manager?.name ?? null,
+        manager_email: member.manager?.email ?? null,
+      };
+    });
+  }
+
+  const members = await prisma.$queryRaw<TeamMemberRow[]>`
+    select
+      p.id::text as id,
+      p.email,
+      p.full_name,
+      p.avatar_url,
+      p.job_title,
+      p.department,
+      p.phone,
+      wm.organization_id::text as organization_id,
+      p.created_at,
+      (wm.status = 'active') as is_active,
+      latest_session.updated_at as last_login_at,
+      latest_role.role_id::text as role_id,
+      latest_role.role_name,
+      latest_role.role_slug,
+      wm.manager_user_id::text as manager_user_id,
+      manager.full_name as manager_name,
+      manager.email as manager_email
+    from public.workspace_memberships wm
+    join public.profiles p
+      on p.id = wm.user_id
+    left join lateral (
+      select s.updated_at
+      from public.sessions s
+      where s."userId" = p.id
+      order by s.updated_at desc
+      limit 1
+    ) latest_session on true
+    left join lateral (
+      select
+        ur.role_id,
+        r.name as role_name,
+        r.slug as role_slug
+      from public.user_roles ur
+      left join public.roles r
+        on r.id = ur.role_id
+      where ur.user_id = p.id
+        and ur.organization_id = wm.organization_id
+      order by ur.assigned_at desc
+      limit 1
+    ) latest_role on true
+    left join public.profiles manager
+      on manager.id = wm.manager_user_id
+    where wm.organization_id = ${organization.id}::uuid
+    order by coalesce(nullif(trim(p.full_name), ''), p.email) asc, p.email asc
+  `;
+
+  return members.map((member) => ({
+    id: member.id,
+    email: member.email,
+    full_name: member.full_name,
+    avatar_url: member.avatar_url,
+    job_title: member.job_title,
+    department: member.department,
+    phone: member.phone,
+    organization_id: member.organization_id,
+    created_at: member.created_at.toISOString(),
+    is_active: member.is_active,
+    last_login_at: member.last_login_at?.toISOString() ?? null,
+    role_id: member.role_id,
+    role_name: member.role_name,
+    role_slug: member.role_slug,
+    is_workspace_owner: member.id === organization.owner_user_id,
+    is_fixed_super_admin: isFixedSuperAdminEmail(member.email),
+    manager_user_id: member.manager_user_id,
+    manager_name: member.manager_name,
+    manager_email: member.manager_email,
+  }));
+}
+
+export async function getTeamMemberById(userId: string): Promise<TeamMember | null> {
+  const members = await getTeamMembers();
+  return members.find((member) => member.id === userId) ?? null;
+}
+
+export async function getTeamInvitations(): Promise<TeamInvitation[]> {
+  const organization = await requireOrganization();
+  const invitations = await prisma.teamInvitation.findMany({
+    where: {
+      organization_id: organization.id,
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+    select: {
+      id: true,
+      organization_id: true,
+      email: true,
+      role_id: true,
+      invited_by: true,
+      token: true,
+      full_name: true,
+      job_title: true,
+      department: true,
+      phone: true,
+      status: true,
+      expires_at: true,
+      accepted_at: true,
+      created_at: true,
+      role: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+      invitedBy: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  return invitations.map((invitation) => {
+    return normalizeInvitationStatus({
+      id: invitation.id,
+      organization_id: invitation.organization_id,
+      email: invitation.email,
+      role_id: invitation.role_id,
+      invited_by: invitation.invited_by,
+      token: invitation.token,
+      full_name: invitation.full_name,
+      job_title: invitation.job_title,
+      department: invitation.department,
+      phone: invitation.phone,
+      status: invitation.status as TeamInvitation["status"],
+      expires_at: invitation.expires_at.toISOString(),
+      accepted_at: invitation.accepted_at?.toISOString() ?? null,
+      created_at: invitation.created_at.toISOString(),
+      role_name: invitation.role?.name ?? null,
+      role_slug: invitation.role?.slug ?? null,
+      invited_by_name: invitation.invitedBy?.name ?? "Unknown",
+      invite_link: `/auth/accept-invite?token=${invitation.token}`,
+    });
+  });
+}
+
+export async function getRoles(): Promise<RoleRow[]> {
+  const organization = await requireOrganization();
+  const roles = await prisma.role.findMany({
+    where: {
+      organization_id: organization.id,
+    },
+    orderBy: [
+      {
+        is_system: "desc",
+      },
+      {
+        name: "asc",
+      },
+    ],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      is_system: true,
+      organization_id: true,
+    },
+  });
+
+  return roles.map(mapRoleRow);
+}
+
+export async function getRoleById(roleId: string): Promise<RoleWithPermissions | null> {
+  const organization = await requireOrganization();
+  const role = await prisma.role.findFirst({
+    where: {
+      id: roleId,
+      organization_id: organization.id,
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      is_system: true,
+      organization_id: true,
+    },
+  });
+
+  if (!role) {
+    return null;
+  }
+
+  return {
+    ...mapRoleRow(role),
+    permissions: await getRolePermissions(roleId),
+  };
+}
+
+export async function getPermissions(): Promise<Permission[]> {
+  await requireOrganization();
+  const permissions = await prisma.permission.findMany({
+    orderBy: {
+      key: "asc",
+    },
+    select: {
+      id: true,
+      key: true,
+      name: true,
+      description: true,
+    },
+  });
+
+  return permissions;
+}
+
+export async function getRolePermissions(roleId: string): Promise<string[]> {
+  const organization = await requireOrganization();
+  const rolePermissions = await prisma.rolePermission.findMany({
+    where: {
+      role_id: roleId,
+      role: {
+        organization_id: organization.id,
+      },
+    },
+    select: {
+      permission: {
+        select: {
+          key: true,
+        },
+      },
+    },
+  });
+
+  return rolePermissions
+    .map((row) => row.permission.key)
+    .filter((value): value is string => Boolean(value));
+}
+
+export async function getRolesWithPermissions(): Promise<RoleWithPermissions[]> {
+  const roles = await getRoles();
+  const permissions = await Promise.all(roles.map((role) => getRolePermissions(role.id)));
+
+  return roles.map((role, index) => ({
+    ...role,
+    permissions: permissions[index] ?? [],
+  }));
+}
+
+export async function getCurrentUserPermissions(): Promise<string[]> {
+  return getUserPermissions();
+}
+
+export async function getCurrentUserId(): Promise<string | null> {
+  const user = await getCurrentUser();
+  return user?.id ?? null;
+}
+
+export async function getInvitationPreview(token: string): Promise<InvitationPreview | null> {
+  const invitation = await prisma.teamInvitation.findUnique({
+    where: {
+      token,
+    },
+    select: {
+      id: true,
+      organization_id: true,
+      email: true,
+      full_name: true,
+      job_title: true,
+      department: true,
+      phone: true,
+      role_id: true,
+      status: true,
+      expires_at: true,
+      role: {
+        select: {
+          name: true,
+        },
+      },
+      organization: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!invitation) {
+    return null;
+  }
+
+  return normalizeInvitationStatus({
+    id: invitation.id,
+    organization_id: invitation.organization_id,
+    organization_name: invitation.organization.name,
+    email: invitation.email,
+    full_name: invitation.full_name,
+    job_title: invitation.job_title,
+    department: invitation.department,
+    phone: invitation.phone,
+    role_id: invitation.role_id,
+    role_name: invitation.role?.name ?? null,
+    status: invitation.status as TeamInvitation["status"],
+    expires_at: invitation.expires_at.toISOString(),
+  });
+}
+
+export async function getPendingInvitationsCount(): Promise<number> {
+  const organization = await requireOrganization();
+  return prisma.teamInvitation.count({
+    where: {
+      organization_id: organization.id,
+      status: "pending",
+    },
+  });
+}
+
+export async function getActiveUsersCount(): Promise<number> {
+  const organization = await requireOrganization();
+
+  if (!(await hasWorkspaceMembershipsTable())) {
+    return prisma.user.count({
+      where: {
+        organization_id: organization.id,
+        is_active: true,
+      },
+    });
+  }
+
+  const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+    select count(*)::bigint as count
+    from public.workspace_memberships
+    where organization_id = ${organization.id}::uuid
+      and status = 'active'
+  `;
+
+  return Number(rows[0]?.count ?? 0);
+}
